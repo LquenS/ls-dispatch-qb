@@ -1,4 +1,5 @@
-local QBCore = exports['qb-core']:GetCoreObject()
+local QBCore = exports['es_extended']:getSharedObject()
+local LS_CORE = exports["ls-core"]:GetCoreObject()
 local calls = {}
 
 function _U(entry)
@@ -30,11 +31,19 @@ RegisterNetEvent("dispatch:server:notify", function(data)
 end)
 
 RegisterNetEvent("dispatch:respondWithHotkey", function(callid)
-    local tPlayer = QBCore.Functions.GetPlayer(source).PlayerData
+    local tPlayer = QBCore.GetPlayerFromId(source)
+
+    local result = LS_CORE.Config.DATABASE( LS_CORE.Config.DATABASE_NAME, 'fetchAll', 'SELECT firstname, lastname FROM users WHERE identifier = @identifier', {
+        ['@identifier'] = tPlayer.identifier
+    })
+    local _player = "NAME NAME"
+    if result[1] then
+        _player = result[1].firstname .. " " .. result[1].lastname
+    end
     
     local player = {
-        identifier = tPlayer.citizenid,
-        fullname = tPlayer.charinfo.firstname .. " " .. tPlayer.charinfo.lastname,
+        identifier = tPlayer.identifier,
+        fullname = _player,
         job = tPlayer.job,
         callsign = "UNKNOWN"
     }
@@ -76,7 +85,7 @@ RegisterNetEvent("dispatch:addUnit", function(callid, player, cb)
         elseif player.job.name == 'ambulance' then
             calls[callid].units[units_count+1] = { identifier = player.identifier, fullname = player.fullname, job = 'EMS', callsign = player.callsign }
         end
-		TriggerClientEvent("dispatch:c:respondWaypoint", player.source, calls[callid])
+		TriggerClientEvent("dispatch:c:respondWaypoint", QBCore.GetPlayerFromIdentifier(player.identifier), calls[callid])
 		
         cb(calls[callid])
     end
@@ -93,6 +102,19 @@ RegisterNetEvent("dispatch:removeUnit", function(callid, player, cb)
         end
         cb(calls[callid])
     end    
+end)
+
+QBCore.RegisterServerCallback('ls-dispatch:s:getName', function(source, cb)
+    local tPlayer = QBCore.GetPlayerFromId(source)
+
+    local result = LS_CORE.Config.DATABASE( LS_CORE.Config.DATABASE_NAME, 'fetchAll', 'SELECT firstname, lastname FROM users WHERE identifier = @identifier', {
+        ['@identifier'] = tPlayer.identifier
+    })
+    local _player = "NAME NAME"
+    if result[1] then
+        _player = result[1].firstname .. " " .. result[1].lastname
+    end
+	cb(_player)
 end)
 
 function GetDispatchCalls() 
